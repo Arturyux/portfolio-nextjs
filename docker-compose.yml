@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ./my-next_app
+      dockerfile: Dockerfile
+    container_name: next_app
+    restart: always
+    volumes:
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+
+  proxy:
+    image: nginxproxy/nginx-proxy
+    container_name: nginx_proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./certs:/etc/nginx/certs
+      - ./vhost:/etc/nginx/vhost.d
+      - ./html:/usr/share/nginx/html
+    environment:
+      - DEFAULT_HOST=yourdomain.com
+
+  letsencrypt:
+    image: nginxproxy/acme-companion
+    container_name: letsencrypt
+    restart: always
+    volumes_from:
+      - proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - DEFAULT_EMAIL=your.email@example.com
+      - NGINX_PROXY_CONTAINER=nginx_proxy
+
+volumes:
+  data:
